@@ -1,0 +1,44 @@
+{
+  "name": "pkg-allowlist",
+  "description": "CFEngine build module repository hosting a module to manage software based on an allowed list of packages.",
+  "type": "module-repo",
+  "provides": {
+    "etc-issue-content": {
+      "description": "This module reports on and optionally removes software installed by the platforms default package module (e.g. ~yum~,  ~apt_get~) that is not in an explicit allow list.",
+      "tags": ["management", "inventory", "security"],
+      "version": "0.0.1",
+      "commit": "x",
+      "by": "https://github.com/nickanderson",
+      "repo": "https://github.com/nickanderson/cfengine-pkg-allowlist",
+      "steps": [
+        "copy main.cf services/cfbs/modules/pkg-allowlist/main.cf",
+        "bundles pkg-allowlist:state",
+        "policy_files services/cfbs/modules/pkg-allowlist/main.cf",
+        "input pkg-allowlist/input.json def.json"
+      ],
+      "input": [
+        {
+          "type": "string",
+          "namespace": "pkg_allowlist",
+          "bundle": "state",
+          "variable": "enforcement",
+          "label": "(disabled|enabled)",
+          "question": "Would you like to enable enforcement for pkg-allowlist?"
+        },
+        {
+          "type": "list",
+          "namespace": "pkg_allowlist",
+          "bundle": "state",
+          "variable": "allowed",
+          "subtype": {
+            "type": "string",
+            "label": "Package name",
+            "question": "What package name would you like to allow?"
+          },
+          "while": "Do you want to allow another package?"
+        }
+      ]
+    }
+  },
+  "git": true
+}
