@@ -7,7 +7,7 @@
       "description": "This module reports on and optionally removes software installed by the platforms default package module (e.g. ~yum~,  ~apt_get~) that is not in an explicit allow list.",
       "tags": ["management", "inventory", "security"],
       "version": "0.0.1",
-      "commit": "x",
+      "commit": "cf41239307b31748b586e4334a4d61af5861de5e",
       "by": "https://github.com/nickanderson",
       "repo": "https://github.com/nickanderson/cfengine-pkg-allowlist",
       "steps": [
