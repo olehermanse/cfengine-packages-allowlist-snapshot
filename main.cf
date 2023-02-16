@@ -1,11 +1,11 @@
 body file control
 {
-      namespace => "pkg_allowlist";
+      namespace => "packages_allowlist";
 }
 bundle agent state
 # @brief Manage software based on an allow list. When enforcement is enabled packages are automatically removed if they are installed and not in the allow list.
-# @variable `pkg_allowlist:state.enforcement` :: String variable that enables enforcement when it's value is `enabled`. Default: `disabled`
-# @variable `pkg_allowlist:state.allowed` :: List of packages that are allowed to be installed.
+# @variable `packages_allowlist:state.enforcement` :: String variable that enables enforcement when it's value is `enabled`. Default: `disabled`
+# @variable `packages_allowlist:state.allowed` :: List of packages that are allowed to be installed.
 # @inventory `Packages installed not in allow list`
 {
   vars:
@@ -18,15 +18,15 @@ bundle agent state
         if => not( isvariable( enforcement ) ),
         comment => concat( "This variable defaults to false but can be ",
                            "overridden by augments by defining ",
-                           "'pkg_allowlist:state.enforcement'" );
+                           "'packages_allowlist:state.enforcement'" );
 
       # "allowed" slist => { "emacs", "cfengine" };
-      # Expected to be defined via Augments/Input 'pkgs_allowed:state.allowed'
+      # Expected to be defined via Augments/Input 'packages_allowed:state.allowed'
 
       # We query CFEngine's cache of package info to get the data of packages
       # installed for the /default/ package manager.
 
-      "d_pkgs_installed"
+      "d_packages_installed"
         data => packagesmatching(".*",
                                  ".*",
                                  ".*",
@@ -34,19 +34,19 @@ bundle agent state
 
       # We get the index of the package installed data so that we can iterate.
 
-      "i_pkgs_installed"
-        slist => getindices( "d_pkgs_installed" );
+      "i_packages_installed"
+        slist => getindices( "d_packages_installed" );
 
       # We build an associative array of packages that should be removed since
       # they are installed but not in the allow list. We use this for inventory
       # and as a step in the process of getting a consolidated list.
 
-      "remove[$(d_pkgs_installed[$(i_pkgs_installed)][name])]"
-        string => "$(d_pkgs_installed[$(i_pkgs_installed)][name])",
-        if => none( concat("^", escape( "$(d_pkgs_installed[$(i_pkgs_installed)][name])" ), "$"), "allowed"),
+      "remove[$(d_packages_installed[$(i_packages_installed)][name])]"
+        string => "$(d_packages_installed[$(i_packages_installed)][name])",
+        if => none( concat("^", escape( "$(d_packages_installed[$(i_packages_installed)][name])" ), "$"), "allowed"),
         meta => { "inventory", "attribute_name=Packages installed not in allow list"};
 
-      "remove_pkgs_named"
+      "remove_packages_named"
         slist => getindices( remove ),
         comment => concat( "This is the consolidated list of packages that ",
                            "are installed but not in the allow list and thus ",
@@ -64,7 +64,7 @@ bundle agent state
 
       # We iterate over the packages installed, promising each package is absent
 
-      "$(remove_pkgs_named)"
+      "$(remove_packages_named)"
         policy => "absent",
         action => default:policy( ifelse( "allow_list_enforcement_enabled", "fix",
                                   "warn" ) ), # Results in promise not kept and loud warnings
@@ -76,18 +76,18 @@ bundle agent state
   reports:
 
     inform_mode::
-      "pkg-allowlist enforcement is not enabled (currently '$(enforcement)') set '$(this.namespace):$(this.bundle).enforcement' to 'enabled' to start enforcing."
+      "packages-allowlist enforcement is not enabled (currently '$(enforcement)') set '$(this.namespace):$(this.bundle).enforcement' to 'enabled' to start enforcing."
         unless => "allow_list_enforcement_enabled";
 
-      "pkg-allowlist enforcement is enabled but the list of allowed packages is not defined."
+      "packages-allowlist enforcement is enabled but the list of allowed packages is not defined."
         if => and( "allow_list_enforcement_enabled",
                    not( isvariable( allowed ) ) );
 
-      "pkg-allowlist enforcement is enabled but the list of allowed packages is empty."
+      "packages-allowlist enforcement is enabled but the list of allowed packages is empty."
         if => and( "allow_list_enforcement_enabled",
                    not( isgreaterthan( length( allowed ), 0 ) ) );
 
-      "pkg-allowlist enforcement is enabled but the list of allowed packages is worringly small ($(with))."
+      "packages-allowlist enforcement is enabled but the list of allowed packages is worringly small ($(with))."
         if => and( "allow_list_enforcement_enabled",
                    not( isgreaterthan( length( allowed ), 5 ) ) ),
         with => length( allowed );

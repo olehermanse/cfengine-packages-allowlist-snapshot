@@ -7,7 +7,7 @@ This module reports on and optionally removes software installed by the platform
 
 * Configuration
 ** Variables
-*** ~pkg_allowlist:state.enforcement~
+*** ~packages_allowlist:state.enforcement~
 
 String variable that enables enforcement when it's value is ~enabled~. Default: ~disabled~
 
@@ -18,14 +18,14 @@ String variable that enables enforcement when it's value is ~enabled~. Default: 
 #+begin_src json
   {
     "variables": {
-      "pkg_allowlist:state.enforcement": {
+      "packages_allowlist:state.enforcement": {
         "value": "enabled"
       }
     }
   }
 #+end_src
 
-*** ~pkg_allowlist:state.allowed~
+*** ~packages_allowlist:state.allowed~
 
 List of packages that are allowed to be installed.
 
@@ -37,7 +37,7 @@ List of packages that are allowed to be installed.
 #+begin_src json
   {
     "variables": {
-      "pkg_allowlist:state.allowed": {
+      "packages_allowlist:state.allowed": {
         "value": [
           "emacs",
           "cfengine-nova",
@@ -52,14 +52,14 @@ List of packages that are allowed to be installed.
 
 At some point, cfbs is going to get check-boxes (booleans) so this is ready for that. Also, we set this class internally when the right string is used in the variable.
 
-*** ~pkg_allowlist:allow_list_enforcement_enabled~
-When defined enforcement of the allow list (replicating the behavior of ~pkg_allowlist:state.enforcement~.
+*** ~packages_allowlist:allow_list_enforcement_enabled~
+When defined enforcement of the allow list (replicating the behavior of ~packages_allowlist:state.enforcement~.
 
 #+caption: Example configuration enabling via Augments
 #+begin_src json
   {
     "classes": {
-      "pkg_allowlist:allow_list_enforcement_enabled": {
+      "packages_allowlist:allow_list_enforcement_enabled": {
         "class_expressions": [
           "any::"
         ]
