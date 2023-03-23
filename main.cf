@@ -30,7 +30,7 @@ bundle agent state
         data => packagesmatching(".*",
                                  ".*",
                                  ".*",
-                                 "$(package_module_knowledge.platform_default)");
+                                 "$(default:package_module_knowledge.platform_default)");
 
       # We get the index of the package installed data so that we can iterate.
 
