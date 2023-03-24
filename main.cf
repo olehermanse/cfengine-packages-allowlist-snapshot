@@ -50,7 +50,8 @@ bundle agent state
       "remove[$(d_packages_installed[$(i_packages_installed)][name])]"
         string => "$(d_packages_installed[$(i_packages_installed)][name])",
         if => none( concat("^", escape( "$(d_packages_installed[$(i_packages_installed)][name])" ), "$"), "allowed"),
-        meta => { "inventory", "attribute_name=Packages installed not in allow list"};
+        meta => { "inventory", "attribute_name=Packages installed not in allow list"},
+        comment => "We inventory every package that is not found in the allowed list of packages when it is defined";
 
       "remove_packages_named"
         slist => getindices( remove ),
@@ -64,19 +65,22 @@ bundle agent state
       # then we define the class for enforce allow list)
 
       "allow_list_enforcement_enabled"
-        expression => regcmp( "^(?i)enabled$", $(enforcement) );
+        expression => regcmp( "^(?i)enabled$", "$($(this.namespace):$(this.bundle).enforcement)" );
 
   packages:
 
       # We iterate over the packages installed, promising each package is absent
 
+    allow_list_enforcement_enabled::
       "$(remove_packages_named)"
         policy => "absent",
-        action => default:policy( ifelse( "allow_list_enforcement_enabled", "fix",
-                                  "warn" ) ), # Results in promise not kept and loud warnings
-        comment => concat( "We promise the packages that are installed but ",
-                           "not in the allow list are absent when ",
-                           "allow_list_enforcement_enabled is defined, else we simply warn"),
+        action => default:policy( "fix" ),
+        if => isgreaterthan( length( allowed ), 0 ); # Avoid enforcing unless the allow list > non-zero
+
+    !allow_list_enforcement_enabled::
+      "$(remove_packages_named)"
+        policy => "absent",
+        action => default:policy( "warn" ), # Results in promise not kept and loud warnings
         if => isgreaterthan( length( allowed ), 0 ); # Avoid enforcing unless the allow list > non-zero
 
   reports:
