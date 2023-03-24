@@ -10,7 +10,7 @@ This module reports on and optionally removes software installed by the platform
 * Inventory
 **  ~Packages installed not in allow list~
 
-[[./packages-allowlist-inventory.png]]
+[[https://raw.github.com/nickanderson/cfengine-packages-allowlist/master/packages-allowlist-inventory.png]]
 
 * Configuration
 ** Variables
