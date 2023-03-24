@@ -43,6 +43,12 @@ bundle agent state
 
       "remove[$(d_packages_installed[$(i_packages_installed)][name])]"
         string => "$(d_packages_installed[$(i_packages_installed)][name])",
+        if => not( isvariable( "allowed" ) ),
+        meta => { "inventory", "attribute_name=Packages installed not in allow list"},
+        comment => "We inventory every package as not allowed if the list of allowed packages is not defined";
+
+      "remove[$(d_packages_installed[$(i_packages_installed)][name])]"
+        string => "$(d_packages_installed[$(i_packages_installed)][name])",
         if => none( concat("^", escape( "$(d_packages_installed[$(i_packages_installed)][name])" ), "$"), "allowed"),
         meta => { "inventory", "attribute_name=Packages installed not in allow list"};
 
