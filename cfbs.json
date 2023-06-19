@@ -1,41 +1,28 @@
 {
-  "name": "packages-allowlist",
-  "description": "CFEngine build module repository hosting a module to manage software based on an allowed list of packages.",
+  "name": "packages-allowlist-snapshot",
+  "description": "Allows you to snapshot which packages are installed on a system, and then enforce that list, uninstalling or giving warnings when other packages appear.",
   "type": "module-repo",
   "provides": {
-    "packages-allowlist": {
-      "description": "This module reports on and optionally removes software installed by the platforms default package module (e.g. ~yum~,  ~apt_get~) that is not in an explicit allow list.",
-      "tags": ["management", "inventory", "security"],
-      "version": "0.0.7",
-      "by": "https://github.com/nickanderson",
-      "repo": "https://github.com/nickanderson/cfengine-packages-allowlist",
+    "packages-allowlist-snapshot": {
+      "description": "Allows you to snapshot which packages are installed on a system, and then enforce that list, uninstalling or giving warnings when other packages appear.",
+      "tags": ["management", "inventory", "security", "experimental"],
+      "version": "0.0.1",
+      "by": "https://github.com/olehermanse",
+      "repo": "https://github.com/olehermanse/cfengine-packages-allowlist-snapshot",
       "steps": [
-        "copy main.cf services/cfbs/modules/packages-allowlist/main.cf",
-        "bundles packages_allowlist:state",
-        "policy_files services/cfbs/modules/packages-allowlist/main.cf",
-        "input packages-allowlist/input.json def.json"
+        "copy main.cf services/cfbs/modules/packages-allowlist-snapshot/main.cf",
+        "bundles packages_allowlist_snapshot:entry_point",
+        "policy_files services/cfbs/modules/packages-allowlist-snapshot/main.cf",
+        "input packages-allowlist-snapshot/input.json def.json"
       ],
       "input": [
         {
           "type": "string",
-          "namespace": "packages_allowlist",
+          "namespace": "packages_allowlist_snapshot",
           "bundle": "state",
-          "variable": "enforcement",
-          "label": "Uninstall not allowed packages (disabled|enabled)",
-          "question": "Would you like to enable enforcement for packages-allowlist? (disabled|enabled)"
-        },
-        {
-          "type": "list",
-          "namespace": "packages_allowlist",
-          "bundle": "state",
-          "variable": "allowed",
-          "label": "Packages",
-          "subtype": {
-            "type": "string",
-            "label": "Package name",
-            "question": "What package name would you like to allow?"
-          },
-          "while": "Do you want to allow another package?"
+          "variable": "mode",
+          "label": "Mode (init|warn|enforce)",
+          "question": "What mode should the module be in?"
         }
       ]
     }

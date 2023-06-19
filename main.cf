@@ -1,104 +1,170 @@
+bundle agent mpf_main
+{
+  methods:
+    "packages_allowlist_snapshot:state";
+    "packages_allowlist_snapshot:conclude";
+}
+
 body file control
 {
-      namespace => "packages_allowlist";
+  namespace => "packages_allowlist_snapshot";
 }
+
+bundle agent entry_point
+{
+  methods:
+    "packages_allowlist_snapshot:state";
+    "packages_allowlist_snapshot:conclude";
+}
+
 bundle agent state
-# @brief Manage software based on an allow list. When enforcement is enabled packages are automatically removed if they are installed and not in the allow list.
-# @variable `packages_allowlist:state.enforcement` :: String variable that enables enforcement when it's value is `enabled`. Default: `disabled`
-# @variable `packages_allowlist:state.allowed` :: List of packages that are allowed to be installed.
-# @inventory `Packages installed not in allow list`
 {
   vars:
-
-      # The policy default tries to be safe, not automatically un-installing
-      # packages if they are not in the allow list.
-
-      "enforcement"
-        string => "disabled",
-        if => not( isvariable( enforcement ) ),
-        comment => concat( "This variable defaults to false but can be ",
-                           "overridden by augments by defining ",
-                           "'packages_allowlist:state.enforcement'" );
-
-      # "allowed" slist => { "emacs", "cfengine" };
-      # Expected to be defined via Augments/Input 'packages_allowed:state.allowed'
-
-      # We query CFEngine's cache of package info to get the data of packages
-      # installed for the /default/ package manager.
-
-      "d_packages_installed"
-        data => packagesmatching(".*",
-                                 ".*",
-                                 ".*",
-                                 "$(default:package_module_knowledge.platform_default)");
-
-      # We get the index of the package installed data so that we can iterate.
-
-      "i_packages_installed"
-        slist => getindices( "d_packages_installed" );
-
-      # We build an associative array of packages that should be removed since
-      # they are installed but not in the allow list. We use this for inventory
-      # and as a step in the process of getting a consolidated list.
-
-      "remove[$(d_packages_installed[$(i_packages_installed)][name])]"
-        string => "$(d_packages_installed[$(i_packages_installed)][name])",
-        if => not( isvariable( "allowed" ) ),
-        meta => { "inventory", "attribute_name=Packages installed not in allow list"},
-        comment => "We inventory every package as not allowed if the list of allowed packages is not defined";
-
-      "remove[$(d_packages_installed[$(i_packages_installed)][name])]"
-        string => "$(d_packages_installed[$(i_packages_installed)][name])",
-        if => none( concat("^", escape( "$(d_packages_installed[$(i_packages_installed)][name])" ), "$"), "allowed"),
-        meta => { "inventory", "attribute_name=Packages installed not in allow list"},
-        comment => "We inventory every package that is not found in the allowed list of packages when it is defined";
-
-      "remove_packages_named"
-        slist => getindices( remove ),
-        comment => concat( "This is the consolidated list of packages that ",
-                           "are installed but not in the allow list and thus ",
-                           "should be removed." );
+    "_filename"
+      string => "$(sys.statedir)/packages-allowlist-snapshot.txt";
 
   classes:
+    "snapshot_exists"
+      if => fileexists("$(_filename)");
+    "mode_found"
+      if => isvariable("mode");
+    "mode_missing"
+      if => not(isvariable("mode"));
+    "mode_init"
+      if => and(isvariable("mode"), strcmp($(mode), "init"));
+    "mode_warn"
+      if => and(isvariable("mode"), strcmp($(mode), "warn"));
+    "mode_enforce"
+      if => and(isvariable("mode"), strcmp($(mode), "enforce"));
+    "allow_list_enforcement_enabled"
+      if => and(
+        isvariable("mode"),
+        strcmp($(mode), "enforce"),
+        fileexists("$(_filename)"));
 
-      # If the allow_list_enforcement_enabled variable is 'enabled' (case insensitive
-      # then we define the class for enforce allow list)
+  vars:
+    "installed_packages_data"
+      data => packagesmatching(
+        ".*",
+        ".*",
+        ".*",
+        "$(default:package_module_knowledge.platform_default)");
+    "installed_packages_names"
+      slist => sort(
+        getvalues(maparray(
+          '$(installed_packages_data[$(this.k)][name])',
+          installed_packages_data)),
+        "lex");
 
-      "allow_list_enforcement_enabled"
-        expression => regcmp( "^(?i)enabled$", "$($(this.namespace):$(this.bundle).enforcement)" );
+  files:
+    snapshot_exists.mode_init::
+      "$(_filename)"
+        create => "true",
+        content => join(
+          "$(const.n)",
+          sort(getvalues("installed_packages_names"), "lex")),
+        if => isvariable("installed_packages_names");
+
+  vars:
+    snapshot_exists::
+      "allowed_packages_names"
+        slist => sort(readstringlist("$(_filename)", "", "\n", inf, inf), "lex");
+      "unwanted_packages_names"
+        slist => sort(
+          difference(
+            getvalues(installed_packages_names),
+            allowed_packages_names),
+          "lex");
 
   packages:
-
-      # We iterate over the packages installed, promising each package is absent
-
     allow_list_enforcement_enabled::
-      "$(remove_packages_named)"
+      "$(unwanted_packages_names)"
         policy => "absent",
-        action => default:policy( "fix" ),
-        if => isgreaterthan( length( allowed ), 0 ); # Avoid enforcing unless the allow list > non-zero
+        action => default:policy( "fix" );
+    mode_warn::
+      "$(unwanted_packages_names)"
+        policy => "absent",
+        action => default:policy( "warn" );
 
-    !allow_list_enforcement_enabled::
-      "$(remove_packages_named)"
-        policy => "absent",
-        action => default:policy( "warn" ), # Results in promise not kept and loud warnings
-        if => isgreaterthan( length( allowed ), 0 ); # Avoid enforcing unless the allow list > non-zero
+  vars:
+    mode_init::
+      "_status"
+        string => "Initializing - Generated snapshot of $(with) installed packages",
+        with => length(installed_packages_names);
+    mode_warn::
+      "_status"
+        string => "Warnings - Printing warnings about $(with) unwanted packages",
+        with => length(unwanted_packages_names);
+    mode_enforce::
+      "_status"
+        string => "Uninstalling - Uninstalling $(with) unwanted packages",
+        with => length(unwanted_packages_names);
+    mode_warn|mode_enforce::
+      "_status"
+        string => "Compliant - All installed packages found in allowed list",
+        if => strcmp("0", length(unwanted_packages_names));
+    mode_found::
+      "_status"
+        string => "Error - 0 allowed packages found",
+        if => strcmp("0", length(allowed_packages_names));
+    mode_found::
+      "_status"
+        string => "Error - 0 installed packages found",
+        if => strcmp("0", length(installed_packages_names));
+    mode_found.(mode_warn|mode_enforce).!snapshot_exists::
+      "_status"
+        string => "Error - No snapshot file found";
+    mode_found.!(mode_warn|mode_init|mode_enforce)::
+      "_status"
+        string => "Error - Unknown mode '$(with)', should be 'warn', 'init', or 'enforce'",
+        with => "$(mode)";
+    mode_missing::
+      "_status"
+        string => "Deactivated - No mode specified";
+    any::
+      "_status"
+        string => "Error - Unknown error",
+        if => not(isvariable("_status"));
+      "status"
+        string => "$(_status)",
+        meta => {"inventory", "attribute_name=Package enforcement status"};
+}
+
+bundle agent conclude
+{
+  vars:
+    "unwanted_packages_arr[$(packages_allowlist_snapshot:state.unwanted_packages_names)]"
+      string => "$(packages_allowlist_snapshot:state.unwanted_packages_names)",
+      meta => {"inventory", "attribute_name=Unwanted packages"};
+    "allowed_packages_arr[$(packages_allowlist_snapshot:state.allowed_packages_names)]"
+      string => "$(packages_allowlist_snapshot:state.allowed_packages_names)",
+      meta => {"inventory", "attribute_name=Allowed packages"};
+    "unwanted_packages_arr"
+      slist => {},
+      if => strcmp(length(getindices(unwanted_packages_arr)), "0"),
+      meta => {"inventory", "attribute_name=Unwanted packages"};
+    "allowed_packages_arr"
+      slist => {},
+      if => strcmp(length(getindices(allowed_packages_arr)), "0"),
+      meta => {"inventory", "attribute_name=Allowed packages"};
+
+  classes:
+    "_error_encountered"
+      if => regcmp("Error.*", "$(state.status)");
 
   reports:
-
-    inform_mode::
-      "packages-allowlist enforcement is not enabled (currently '$(enforcement)') set '$(this.namespace):$(this.bundle).enforcement' to 'enabled' to start enforcing."
-        unless => "allow_list_enforcement_enabled";
-
-      "packages-allowlist enforcement is enabled but the list of allowed packages is not defined."
-        if => and( "allow_list_enforcement_enabled",
-                   not( isvariable( allowed ) ) );
-
-      "packages-allowlist enforcement is enabled but the list of allowed packages is empty."
-        if => and( "allow_list_enforcement_enabled",
-                   not( isgreaterthan( length( allowed ), 0 ) ) );
-
-      "packages-allowlist enforcement is enabled but the list of allowed packages is worringly small ($(with))."
-        if => and( "allow_list_enforcement_enabled",
-                   not( isgreaterthan( length( allowed ), 5 ) ) ),
-        with => length( allowed );
+    default:DEBUG|default:debug|default:debug_packages_allowlist_snapshot|_error_encountered::
+      "Installed packages found: $(with)"
+        with => length("packages_allowlist_snapshot:state.installed_packages_names"),
+        if => isvariable("packages_allowlist_snapshot:state.installed_packages_names");
+      "Allowed packages found: $(with)"
+        with => length("packages_allowlist_snapshot:state.allowed_packages_names"),
+        if => isvariable("packages_allowlist_snapshot:state.allowed_packages_names");
+      "Unwanted packages found: $(with)"
+        with => length("packages_allowlist_snapshot:state.unwanted_packages_names"),
+        if => isvariable("packages_allowlist_snapshot:state.unwanted_packages_names");
+      "Unwanted package: $(packages_allowlist_snapshot:state.unwanted_packages_names)"
+        if => isvariable("packages_allowlist_snapshot:state.unwanted_packages_names");
+      "Package enforcement status: $(packages_allowlist_snapshot:state.status)"
+        if => isvariable("packages_allowlist_snapshot:state.status");
 }
