@@ -134,11 +134,17 @@ bundle agent conclude
       meta => {"inventory", "attribute_name=Allowed packages"};
     "unwanted_packages_arr"
       slist => {},
-      if => strcmp(length(getindices(unwanted_packages_arr)), "0"),
+      if => or(
+        not(isvariable("packages_allowlist_snapshot:state.unwanted_packages_names")),
+        strcmp(length("packages_allowlist_snapshot:state.unwanted_packages_names"), "0")
+      ),
       meta => {"inventory", "attribute_name=Unwanted packages"};
     "allowed_packages_arr"
       slist => {},
-      if => strcmp(length(getindices(allowed_packages_arr)), "0"),
+      if => or(
+        not(isvariable(  "packages_allowlist_snapshot:state.allowed_packages_names")),
+        strcmp(length(  "packages_allowlist_snapshot:state.allowed_packages_names"), "0")
+      ),
       meta => {"inventory", "attribute_name=Allowed packages"};
 
   classes:
