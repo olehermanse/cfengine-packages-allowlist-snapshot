@@ -50,7 +50,7 @@ bundle agent state
         "lex");
 
   files:
-    snapshot_exists.mode_init::
+    mode_init::
       "$(_filename)"
         create => "true",
         content => join(
