@@ -80,11 +80,11 @@ bundle agent state
     allow_list_enforcement_enabled::
       "$(unwanted_packages_names)"
         policy => "absent",
-        action => default:policy( "fix" );
+        action => default:policy("fix");
     mode_warn::
       "$(unwanted_packages_names)"
         policy => "absent",
-        action => default:policy( "warn" );
+        action => default:policy("warn");
 
   vars:
     mode_init::
