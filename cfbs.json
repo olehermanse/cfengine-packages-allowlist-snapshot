@@ -21,8 +21,8 @@
           "namespace": "packages_allowlist_snapshot",
           "bundle": "state",
           "variable": "mode",
-          "label": "Mode (init|warn|enforce)",
-          "question": "What mode should the module be in?"
+          "label": "Mode",
+          "question": "What mode should the module be in? (init|warn|enforce)"
         }
       ]
     }
