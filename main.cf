@@ -142,8 +142,8 @@ bundle agent conclude
     "allowed_packages_arr"
       slist => {},
       if => or(
-        not(isvariable(  "packages_allowlist_snapshot:state.allowed_packages_names")),
-        strcmp(length(  "packages_allowlist_snapshot:state.allowed_packages_names"), "0")
+        not(isvariable("packages_allowlist_snapshot:state.allowed_packages_names")),
+        strcmp(length("packages_allowlist_snapshot:state.allowed_packages_names"), "0")
       ),
       meta => {"inventory", "attribute_name=Allowed packages"};
 
